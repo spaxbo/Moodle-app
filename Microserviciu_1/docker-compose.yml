@@ -1,0 +1,35 @@
+services:
+  db_teachers:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: teachers
+      POSTGRES_PASSWORD: students
+      POSTGRES_DB: db_teachers
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - shared-network
+
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - db_teachers
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgres://teachers:students@db_teachers:5432/db_teachers
+    networks:
+      - shared-network
+
+volumes:
+  postgres_data:
+
+networks:
+  shared-network:
+    name: shared-network

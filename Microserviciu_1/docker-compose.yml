@@ -18,12 +18,20 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
-    depends_on:
-      - db_teachers
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: postgres://teachers:students@db_teachers:5432/db_teachers
+    networks:
+      - shared-network
+
+  nginx:
+    image: nginx:latest
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
     networks:
       - shared-network
 

@@ -122,4 +122,7 @@ class LectureEnrollment(BaseModel):
 class LectureEnrollment_Evaluation(BaseModel) :
     probe : list[dict]
 
+class AddCollaboratorRequest(BaseModel):
+    profesor_id: int
+
 

@@ -14,7 +14,7 @@ class Profesori(Base) :
     asociere = Column(String, index = True)
 
     discipline = relationship("Discipline", back_populates="titular")
-
+    discipline_colaboratori = relationship("ColaboratoriDiscipline", back_populates="profesor")
 
 class Discipline(Base) : 
     __tablename__ = "DISCIPLINE"
@@ -29,6 +29,7 @@ class Discipline(Base) :
 
     titular = relationship("Profesori", back_populates="discipline")
     studenti = relationship("Studenti", secondary="JOIN_DS", back_populates="discipline")
+    colaboratori = relationship("ColaboratoriDiscipline", back_populates="disciplina")
 
 class Studenti(Base) : 
     __tablename__ = "STUDENTI"
@@ -49,3 +50,12 @@ class Join_DS(Base) :
 
     disciplinaID = Column(String(20), ForeignKey("DISCIPLINE.cod"), primary_key=True)
     studentID = Column(Integer, ForeignKey("STUDENTI.id"), primary_key=True)
+
+class ColaboratoriDiscipline(Base):
+    __tablename__ = "COLABORATORI_DISCIPLINE"
+
+    id_profesor = Column(Integer, ForeignKey("PROFESORI.id"), primary_key=True)
+    cod_disciplina = Column(String, ForeignKey("DISCIPLINE.cod"), primary_key=True)
+
+    profesor = relationship("Profesori", back_populates="discipline_colaboratori")
+    disciplina = relationship("Discipline", back_populates="colaboratori")

@@ -6,8 +6,6 @@ services:
     container_name: fastapi_app
     ports:
       - "8001:8000"
-    depends_on:
-      - mongodb
     networks:
       - shared-network
 
@@ -20,7 +18,18 @@ services:
       - ./data:/data/db
     networks:
       - shared-network
+  
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "81:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - shared-network
 
 networks:
   shared-network:
     name: shared-network
+

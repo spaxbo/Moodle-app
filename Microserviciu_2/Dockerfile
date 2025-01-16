@@ -1,12 +1,13 @@
-FROM python:3.12-alpine
+FROM python:3.11-slim
 
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     musl-dev \
     libffi-dev \
-    openssl-dev \
+    libssl-dev \
     python3-dev \
-    build-base
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

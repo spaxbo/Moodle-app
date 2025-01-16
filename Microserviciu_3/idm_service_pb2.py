@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11idm_service.proto\"2\n\x0cLoginRequest\x12\x10\n\x08username\x18\x01 \x01(\t\x12\x10\n\x08password\x18\x02 \x01(\t\"\x1e\n\rLoginResponse\x12\r\n\x05token\x18\x01 \x01(\t\"%\n\x14ValidateTokenRequest\x12\r\n\x05token\x18\x01 \x01(\t\"F\n\x15ValidateTokenResponse\x12\r\n\x05valid\x18\x01 \x01(\x08\x12\x10\n\x08username\x18\x02 \x01(\t\x12\x0c\n\x04role\x18\x03 \x01(\t\"\x1e\n\rLogoutRequest\x12\r\n\x05token\x18\x01 \x01(\t\"2\n\x0eLogoutResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"C\n\x0fRegisterRequest\x12\x10\n\x08username\x18\x01 \x01(\t\x12\x10\n\x08password\x18\x02 \x01(\t\x12\x0c\n\x04role\x18\x03 \x01(\t\"#\n\x10RegisterResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x32\xd0\x01\n\nIDMService\x12&\n\x05Login\x12\r.LoginRequest\x1a\x0e.LoginResponse\x12>\n\rValidateToken\x12\x15.ValidateTokenRequest\x1a\x16.ValidateTokenResponse\x12)\n\x06Logout\x12\x0e.LogoutRequest\x1a\x0f.LogoutResponse\x12/\n\x08Register\x12\x10.RegisterRequest\x1a\x11.RegisterResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11idm_service.proto\"2\n\x0cLoginRequest\x12\x10\n\x08username\x18\x01 \x01(\t\x12\x10\n\x08password\x18\x02 \x01(\t\"\x1e\n\rLoginResponse\x12\r\n\x05token\x18\x01 \x01(\t\"%\n\x14ValidateTokenRequest\x12\r\n\x05token\x18\x01 \x01(\t\"F\n\x15ValidateTokenResponse\x12\r\n\x05valid\x18\x01 \x01(\x08\x12\x10\n\x08username\x18\x02 \x01(\t\x12\x0c\n\x04role\x18\x03 \x01(\t\"\x1e\n\rLogoutRequest\x12\r\n\x05token\x18\x01 \x01(\t\"2\n\x0eLogoutResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"T\n\x11\x43reateUserRequest\x12\x10\n\x08username\x18\x01 \x01(\t\x12\x10\n\x08password\x18\x02 \x01(\t\x12\x0c\n\x04role\x18\x03 \x01(\t\x12\r\n\x05token\x18\x04 \x01(\t\"6\n\x12\x43reateUserResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"h\n\x15\x43hangePasswordRequest\x12\x10\n\x08username\x18\x01 \x01(\t\x12\x18\n\x10\x63urrent_password\x18\x02 \x01(\t\x12\x14\n\x0cnew_password\x18\x03 \x01(\t\x12\r\n\x05token\x18\x04 \x01(\t\":\n\x16\x43hangePasswordResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"%\n\x11\x44\x65leteUserRequest\x12\x10\n\x08username\x18\x01 \x01(\t\"6\n\x12\x44\x65leteUserResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t2\xd0\x02\n\nIDMService\x12&\n\x05Login\x12\r.LoginRequest\x1a\x0e.LoginResponse\x12>\n\rValidateToken\x12\x15.ValidateTokenRequest\x1a\x16.ValidateTokenResponse\x12)\n\x06Logout\x12\x0e.LogoutRequest\x1a\x0f.LogoutResponse\x12\x35\n\nCreateUser\x12\x12.CreateUserRequest\x1a\x13.CreateUserResponse\x12\x35\n\nDeleteUser\x12\x12.DeleteUserRequest\x1a\x13.DeleteUserResponse\x12\x41\n\x0e\x43hangePassword\x12\x16.ChangePasswordRequest\x1a\x17.ChangePasswordResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -43,10 +43,18 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_LOGOUTREQUEST']._serialized_end=246
   _globals['_LOGOUTRESPONSE']._serialized_start=248
   _globals['_LOGOUTRESPONSE']._serialized_end=298
-  _globals['_REGISTERREQUEST']._serialized_start=300
-  _globals['_REGISTERREQUEST']._serialized_end=367
-  _globals['_REGISTERRESPONSE']._serialized_start=369
-  _globals['_REGISTERRESPONSE']._serialized_end=404
-  _globals['_IDMSERVICE']._serialized_start=407
-  _globals['_IDMSERVICE']._serialized_end=615
+  _globals['_CREATEUSERREQUEST']._serialized_start=300
+  _globals['_CREATEUSERREQUEST']._serialized_end=384
+  _globals['_CREATEUSERRESPONSE']._serialized_start=386
+  _globals['_CREATEUSERRESPONSE']._serialized_end=440
+  _globals['_CHANGEPASSWORDREQUEST']._serialized_start=442
+  _globals['_CHANGEPASSWORDREQUEST']._serialized_end=546
+  _globals['_CHANGEPASSWORDRESPONSE']._serialized_start=548
+  _globals['_CHANGEPASSWORDRESPONSE']._serialized_end=606
+  _globals['_DELETEUSERREQUEST']._serialized_start=608
+  _globals['_DELETEUSERREQUEST']._serialized_end=645
+  _globals['_DELETEUSERRESPONSE']._serialized_start=647
+  _globals['_DELETEUSERRESPONSE']._serialized_end=701
+  _globals['_IDMSERVICE']._serialized_start=704
+  _globals['_IDMSERVICE']._serialized_end=1040
 # @@protoc_insertion_point(module_scope)

@@ -6,7 +6,7 @@ Base = declarative_base()
 
 class UserRole(enum.Enum) :
     admin = "admin"
-    profesor = "teacher"
+    teacher = "teacher"
     student = "student"
 
 class User(Base) :

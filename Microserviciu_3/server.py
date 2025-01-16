@@ -13,16 +13,21 @@ import idm_service_pb2
 import idm_service_pb2_grpc
 from datetime import datetime, timedelta
 
+load_dotenv()
+
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@idm_db:5432/idm_db")
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base.metadata.create_all(bind=engine)
-load_dotenv()
 secret_key = "e180f017c88101758c609be62fef16adacae5c655d51dac5dd9adfc073ce901bdd50caa734114e002b262c8e33b8d9714b25b09309b87e199e2a8b234ff9cd44ef5e05b1fb1f2e26f56801e2955ee872108eb4d3a12c74b6f17a9b6a3db555a66364a1d4fb84057c8fb44116b4b2b0991805262c3813b8e91cbb409498e0feb5a9dcaedf751c48c8ee6d764fb86ec25a27c472219283e7e0ebac7dcb26ed2cec3f7b18795ba820cf8c00e287eb97f78944d34e53ad898a1e50a2c6004376e947f57f85a82755f97b83467e15f85da7b27abbdeb6638d1ed7b38b627b1fa425fe8c7696abf34d02ce595465d8908883c2f3a61e2d9253a284af6dc8950926c9c3"
 
 def hashpassword(password: str, salt: str = "default_salt") -> str :
     salted_password = f"{salt}{password}".encode('utf-8')
     return hashlib.sha256(salted_password).hexdigest()
+
+def verify_password(plain_password: str, hashed_password: str, salt: str = "default_salt") -> bool:
+    return hashpassword(plain_password, salt) == hashed_password
+
 
 class IDMServiceServices(idm_service_pb2_grpc.IDMServiceServicer) :
     def __init__(self) :
@@ -110,67 +115,57 @@ class IDMServiceServices(idm_service_pb2_grpc.IDMServiceServicer) :
             context.set_details("Internal server error")
             return idm_service_pb2.LogoutResponse(success=False, message="Failed to blacklist token")
     
-    def Register(self, request, context):
+    def CreateUser(self, request, context) :
         try:
-
-            if not request.token:
-                print("Registration failed: Missing token in request.")
-                context.set_code(grpc.StatusCode.UNAUTHENTICATED)
-                context.set_details("Authentication required.")
-                return idm_service_pb2.RegisterResponse(success=False)
-
-            validate_response = self.ValidateToken(idm_service_pb2.ValidateToken(token=token), context=context)
-            if not validate_response.valid:
-                print("Registration failed: Invalid token.")
-                context.set_code(grpc.StatusCode.PERMISSION_DENIED)
-                context.set_details("Invalid or expired token.")
-                return idm_service_pb2.RegisterResponse(success=False)
-            
-            invoker_role = validate_response.role
-            print(f"Invoker role: {invoker_role}")
-
-            if invoker_role != "admin":
-                print(f"Registration failed: Only admins can create users. Invoker role: {invoker_role}.")
-                context.set_code(grpc.StatusCode.PERMISSION_DENIED)
-                context.set_details("Only admins can create users.")
-                return idm_service_pb2.RegisterResponse(success=False)
-
             existing_user = self.db.query(User).filter(User.email == request.username).first()
             if existing_user:
-                print(f"Registration failed: User with email {request.username} already exists.")
+                print(f"User with email {request.username} already exists.")
                 context.set_code(grpc.StatusCode.ALREADY_EXISTS)
                 context.set_details("User already exists")
-                return idm_service_pb2.RegisterResponse(success=False)
-            
-            hashed_password = hashpassword(request.password)
-            if request.role not in [role.name for role in UserRole]:
-                print(f"Registration failed: Invalid role {request.role} provided")
-                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-                context.set_details("Invalid role")
-                return idm_service_pb2.RegisterResponse(success=False)
-            
-            user_role = UserRole[request.role]
+                return idm_service_pb2.CreateUserResponse(success=False, message="User already exists")
 
-            new_user = User(email=request.username, password=hashed_password, role=user_role)
-            self.db.add(new_user)
+            match request.role:
+                case "admin":
+                    user = User(email=request.username, password=hashpassword(request.password), role=UserRole.admin)
+                case "teacher":
+                    user = User(email=request.username, password=hashpassword(request.password), role=UserRole.teacher)
+                case "student":
+                    user = User(email=request.username, password=hashpassword(request.password), role=UserRole.student)
+                case _:
+                    return idm_service_pb2.CreateUserResponse(success=False, message="Wrong user type")
+
+            self.db.add(user)
+            self.db.commit()
+        
+            print(f"User created: {request.username} with role {request.role}")
+            return idm_service_pb2.CreateUserResponse(success=True, message="User created successfully.")
+        except Exception as e:
+            print(f"Error during user creation: {str(e)}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details("Internal server error")
+            return idm_service_pb2.CreateUserResponse(success=False, message="Failed to create user")
+
+
+    def DeleteUser(self, request, context):
+        try:
+            user = self.db.query(User).filter(User.email == request.username).first()
+            if not user:
+                print(f"User with email {request.username} does not exist.")
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                context.set_details("User not found")
+                return idm_service_pb2.DeleteUserResponse(success=False, message="User not found")
+            
+            self.db.delete(user)
             self.db.commit()
 
-            print(f"User {request.username} registered successfully with role {request.role}.")
-            return idm_service_pb2.RegisterResponse(success=True)
-
-        except IntegrityError:
-            print(f"Registration failed: Integrity error for user {request.username}.")
-            context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details("Internal server error")
-            self.db.rollback()
-            return idm_service_pb2.RegisterResponse(success=False)
-
+            print(f"User with email {request.username} successfully deleted.")
+            return idm_service_pb2.DeleteUserResponse(success=True, message="User deleted successfully.")
         except Exception as e:
-            print(f"Error during registration: {str(e)}")
+            print(f"Error during user deletion: {str(e)}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details("Internal server error")
-            self.db.rollback()
-            return idm_service_pb2.RegisterResponse(success=False)
+            return idm_service_pb2.DeleteUserResponse(success=False, message="Failed to delete user")
+            
     
     def blacklist_token(self, token):
         try:
@@ -185,6 +180,33 @@ class IDMServiceServices(idm_service_pb2_grpc.IDMServiceServicer) :
             self.db.rollback()
             print(f"Error during token blacklisting: {str(e)}")
 
+    def ChangePassword(self, request, context):
+        try:
+            user = self.db.query(User).filter(User.email == request.username).first()
+            if not user:
+                print(f"User with email {request.username} does not exist.")
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                context.set_details("User not found")
+                return idm_service_pb2.ChangePasswordResponse(success=False, message="User not found")
+            
+            if not verify_password(request.current_password, user.password):
+                print(f"Wrong current password for user {request.username}")
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details("Wrong current password")
+                return idm_service_pb2.ChangePasswordResponse(success=False, message="Wrong current password")
+
+            user.password = hashpassword(request.new_password, salt="default_salt")
+            self.db.commit()
+
+            print(f"Password changed successfully for user: {request.username}")
+            return idm_service_pb2.ChangePasswordResponse(success=True, message="Password changed successfully")
+
+        except Exception as e:
+            print(f"Error during password change: {str(e)}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details("Internal server error")
+            return idm_service_pb2.ChangePasswordResponse(success=False, message="Failed to change password")
+     
 def initialize_admin():
     try:
         db = SessionLocal()
@@ -219,5 +241,7 @@ def serve():
     server.wait_for_termination()
 
 if __name__ == "__main__":
+    print("Initializing admin user...")
     initialize_admin()
+    print("Starting gRPC server...")
     serve()

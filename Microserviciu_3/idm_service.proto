@@ -7,7 +7,11 @@ service IDMService {
     
     rpc Logout(LogoutRequest) returns (LogoutResponse);
     
-    rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+
+    rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+
+    rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
 }
 
 message LoginRequest {
@@ -38,12 +42,35 @@ message LogoutResponse {
     string message = 2;
 }
 
-message RegisterRequest {
+message CreateUserRequest {
     string username = 1;
     string password = 2;
     string role = 3;
+    string token = 4;
 }
 
-message RegisterResponse {
+message CreateUserResponse {
     bool success = 1;
+    string message = 2;
+}
+
+message ChangePasswordRequest {
+    string username = 1;
+    string current_password = 2;
+    string new_password = 3;
+    string token = 4;
+}
+
+message ChangePasswordResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message DeleteUserRequest{
+    string username = 1;
+}
+
+message DeleteUserResponse{
+    bool success = 1;
+    string message = 2;
 }

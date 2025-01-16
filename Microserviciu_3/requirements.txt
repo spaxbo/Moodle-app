@@ -1,3 +1,5 @@
+fastapi
+uvicorn
 grpcio
 grpcio-tools
 psycopg2-binary
@@ -6,3 +8,4 @@ sqlalchemy
 pyjwt
 protobuf
 python-dotenv
+python-multipart

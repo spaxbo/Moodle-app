@@ -49,10 +49,20 @@ class IDMServiceStub(object):
                 request_serializer=idm__service__pb2.LogoutRequest.SerializeToString,
                 response_deserializer=idm__service__pb2.LogoutResponse.FromString,
                 _registered_method=True)
-        self.Register = channel.unary_unary(
-                '/IDMService/Register',
-                request_serializer=idm__service__pb2.RegisterRequest.SerializeToString,
-                response_deserializer=idm__service__pb2.RegisterResponse.FromString,
+        self.CreateUser = channel.unary_unary(
+                '/IDMService/CreateUser',
+                request_serializer=idm__service__pb2.CreateUserRequest.SerializeToString,
+                response_deserializer=idm__service__pb2.CreateUserResponse.FromString,
+                _registered_method=True)
+        self.DeleteUser = channel.unary_unary(
+                '/IDMService/DeleteUser',
+                request_serializer=idm__service__pb2.DeleteUserRequest.SerializeToString,
+                response_deserializer=idm__service__pb2.DeleteUserResponse.FromString,
+                _registered_method=True)
+        self.ChangePassword = channel.unary_unary(
+                '/IDMService/ChangePassword',
+                request_serializer=idm__service__pb2.ChangePasswordRequest.SerializeToString,
+                response_deserializer=idm__service__pb2.ChangePasswordResponse.FromString,
                 _registered_method=True)
 
 
@@ -77,7 +87,19 @@ class IDMServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def Register(self, request, context):
+    def CreateUser(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteUser(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ChangePassword(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -101,10 +123,20 @@ def add_IDMServiceServicer_to_server(servicer, server):
                     request_deserializer=idm__service__pb2.LogoutRequest.FromString,
                     response_serializer=idm__service__pb2.LogoutResponse.SerializeToString,
             ),
-            'Register': grpc.unary_unary_rpc_method_handler(
-                    servicer.Register,
-                    request_deserializer=idm__service__pb2.RegisterRequest.FromString,
-                    response_serializer=idm__service__pb2.RegisterResponse.SerializeToString,
+            'CreateUser': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateUser,
+                    request_deserializer=idm__service__pb2.CreateUserRequest.FromString,
+                    response_serializer=idm__service__pb2.CreateUserResponse.SerializeToString,
+            ),
+            'DeleteUser': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteUser,
+                    request_deserializer=idm__service__pb2.DeleteUserRequest.FromString,
+                    response_serializer=idm__service__pb2.DeleteUserResponse.SerializeToString,
+            ),
+            'ChangePassword': grpc.unary_unary_rpc_method_handler(
+                    servicer.ChangePassword,
+                    request_deserializer=idm__service__pb2.ChangePasswordRequest.FromString,
+                    response_serializer=idm__service__pb2.ChangePasswordResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -199,7 +231,7 @@ class IDMService(object):
             _registered_method=True)
 
     @staticmethod
-    def Register(request,
+    def CreateUser(request,
             target,
             options=(),
             channel_credentials=None,
@@ -212,9 +244,63 @@ class IDMService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/IDMService/Register',
-            idm__service__pb2.RegisterRequest.SerializeToString,
-            idm__service__pb2.RegisterResponse.FromString,
+            '/IDMService/CreateUser',
+            idm__service__pb2.CreateUserRequest.SerializeToString,
+            idm__service__pb2.CreateUserResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeleteUser(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/IDMService/DeleteUser',
+            idm__service__pb2.DeleteUserRequest.SerializeToString,
+            idm__service__pb2.DeleteUserResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ChangePassword(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/IDMService/ChangePassword',
+            idm__service__pb2.ChangePasswordRequest.SerializeToString,
+            idm__service__pb2.ChangePasswordResponse.FromString,
             options,
             channel_credentials,
             insecure,

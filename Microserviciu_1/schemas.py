@@ -15,15 +15,23 @@ class ProfesorBase(BaseModel):
             raise ValueError(f"{field.name} cannot be empty")
         return value
 
-class ProfesorCreate(ProfesorBase):
-    pass
+class ProfesorCreate(BaseModel):
+    nume: str
+    prenume: str
+    email: str
+    grad_didactic: str
+    tip_asociere: str
+    asociere: str
+
+    class Config:
+        from_attributes = True
 
 class Profesor(ProfesorBase):
     id : int
     discipline : List["Discipline"] = []
     
     class Config : 
-        orm_mode = True
+        from_attributes = True
 
 class ProfesorUpdate(BaseModel):
     nume: Optional[str] = None
@@ -33,11 +41,8 @@ class ProfesorUpdate(BaseModel):
     tip_asociere: Optional[str] = None
     asociere: Optional[str] = None
 
-    @field_validator("nume", "prenume", "grad_didactic", "tip_asociere", "asociere", mode="before")
-    def field_not_empty(cls, value, field):
-        if value == "":
-            raise ValueError(f"{field.name} cannot be empty")
-        return value
+    class Config:
+        from_attributes = True
 
 class DisciplineBase(BaseModel) : 
     cod : str
@@ -54,6 +59,9 @@ class DisciplineBase(BaseModel) :
             raise ValueError(f"{field.name} cannot be empty")
         return value
 
+    class Config:
+        from_attributes = True
+
 class DisciplineCreate(DisciplineBase) : 
     pass
 
@@ -62,7 +70,7 @@ class Discipline(DisciplineBase) :
     studenti : List["Student"] = []
  
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class DisciplineUpdate(BaseModel):
     cod : Optional[str] = None
@@ -73,11 +81,8 @@ class DisciplineUpdate(BaseModel):
     tip_examinare: Optional[str] = None
     id_titular: Optional[int] = None
 
-    @field_validator("cod", "nume_disciplina", "tip_disciplina", "categorie_disciplina", "tip_examinare", mode="before")
-    def field_not_empty(cls, value, field):
-        if value == "":
-            raise ValueError(f"{field.name} cannot be empty")
-        return value
+    class Config:
+        from_attributes = True
 
 class StudentBase(BaseModel) : 
     email : EmailStr
@@ -94,13 +99,22 @@ class StudentBase(BaseModel) :
         return value
 
 class StudentCreate(StudentBase) : 
-    pass
+    email : EmailStr
+    nume : str
+    prenume : str
+    ciclu_studii : str
+    an_studiu : int
+    grupa : int
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
 
 class Student(StudentBase) : 
     id : int
     discipline : List[Discipline] = []
     class Config : 
-        orm_mode = True
+        from_attributes = True
 
 class StudentUpdate(BaseModel) : 
     email : Optional[EmailStr] = None
@@ -110,13 +124,11 @@ class StudentUpdate(BaseModel) :
     an_studiu : Optional[int] = None
     grupa : Optional[int] = None
 
-    @field_validator("email", "nume", "prenume", "ciclu_studii", "an_studiu", "grupa", mode="before")
-    def field_not_empty(cls, value, field):
-        if value == "":
-            raise ValueError(f"{field.name} cannot be empty")
-        return value
+    class Config:
+        from_attributes = True
 
 class LectureEnrollment(BaseModel):
+    email: str
     discipline_cod: str
 
 class LectureEnrollment_Evaluation(BaseModel) :

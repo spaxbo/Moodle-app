@@ -14,6 +14,11 @@ class TokenValidationMiddleware:
             return
 
         request = Request(scope, receive)
+
+        if request.method == "OPTIONS":
+            await self.app(scope, receive, send)
+            return
+
         authorization = request.headers.get("Authorization")
 
         if not authorization or not authorization.startswith("Bearer "):
@@ -26,7 +31,7 @@ class TokenValidationMiddleware:
         token = authorization.split(" ")[1]
 
         try:
-            with grpc.insecure_channel("localhost:50051") as channel:
+            with grpc.insecure_channel("idm_service:50051") as channel:
                 stub = idm_service_pb2_grpc.IDMServiceStub(channel)
                 response = stub.ValidateToken(idm_service_pb2.ValidateTokenRequest(token=token))
 

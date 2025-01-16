@@ -1,16 +1,18 @@
-from fastapi import FastAPI, Depends, HTTPException, Query, Body, Request, Security
+from fastapi import FastAPI, Depends, HTTPException, Query, Body, Request
 from sqlalchemy.orm import Session
 import models
 import schemas
 import requests
-from fastapi.security.api_key import APIKeyHeader
+from datetime import datetime, timedelta
 from middleware import TokenValidationMiddleware
 from database import get_db, engine
 from typing import List, Optional
-from pydantic import EmailStr
+from pydantic import EmailStr, BaseModel
 from models import Studenti, Profesori, Discipline, Join_DS
 from requests.auth import HTTPBasicAuth
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import jwt
 
 app = FastAPI(
     title="Moodle Academy M1 with SQL",
@@ -20,27 +22,48 @@ app = FastAPI(
     version="3.0.0"
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.add_middleware(TokenValidationMiddleware)
 models.Base.metadata.create_all(bind = engine)
 
-api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
+secret_key = "e180f017c88101758c609be62fef16adacae5c655d51dac5dd9adfc073ce901bdd50caa734114e002b262c8e33b8d9714b25b09309b87e199e2a8b234ff9cd44ef5e05b1fb1f2e26f56801e2955ee872108eb4d3a12c74b6f17a9b6a3db555a66364a1d4fb84057c8fb44116b4b2b0991805262c3813b8e91cbb409498e0feb5a9dcaedf751c48c8ee6d764fb86ec25a27c472219283e7e0ebac7dcb26ed2cec3f7b18795ba820cf8c00e287eb97f78944d34e53ad898a1e50a2c6004376e947f57f85a82755f97b83467e15f85da7b27abbdeb6638d1ed7b38b627b1fa425fe8c7696abf34d02ce595465d8908883c2f3a61e2d9253a284af6dc8950926c9c3"
 
 def validate_admin_role(request: Request):
     user = request.scope.get("user")
-    if user is None or user.role != "admin":
+    if user is None or user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Forbidden: insufficient permissions")
 
 def validate_student_role(request: Request):
     user = request.scope.get("user")
-    if user is None or user.role != "student":
+    if user is None or user.get("role") != "student":
         raise HTTPException(status_code=403, detail="Forbidden: insufficient permissions")
 
 def validate_teacher_role(request: Request):
     user = request.scope.get("user")
-    if user is None or user.role != "teacher":
+    if user is None or user.get("role") != "teacher":
         raise HTTPException(status_code=403, detail="Forbidden: insufficient permissions")
 
-@app.post("/api/academia/professors", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/{email}")
+def get_profesor_or_student_by_email(email: str, db: Session = Depends(get_db)):
+    profesor = db.query(models.Profesori).filter(models.Profesori.email == email).first()
+    if profesor:
+        return {"id": profesor.id, "role": "teacher"}
+
+    student = db.query(models.Studenti).filter(models.Studenti.email == email).first()
+    if student:
+        return {"id": student.id}
+
+    raise HTTPException(status_code=404, detail="User not found")
+
+
+@app.post("/api/academia/professors")
 def create_professor(professor : schemas.ProfesorCreate, request: Request, db : Session = Depends(get_db)):
 
     validate_admin_role(request)
@@ -57,7 +80,7 @@ def create_professor(professor : schemas.ProfesorCreate, request: Request, db : 
     db.commit()
     db.refresh(db_professor)
     response_data = {
-        **db_professor.__dict__,
+        **schemas.ProfesorCreate.from_orm(db_professor).dict(),
         "_links" : {
             "self": {"href": "/api/academia/professors", "method": "POST"},
             "parent": {"href": "/api/academia/professors", "method": "GET"},
@@ -68,14 +91,8 @@ def create_professor(professor : schemas.ProfesorCreate, request: Request, db : 
 
     return JSONResponse(status_code=201, content=response_data)
 
-@app.get("/api/academia/professors/{id}", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/professors/{id}")
 def read_professor(id : int, request: Request, db: Session = Depends(get_db)):
-
-    validate_admin_role(request)
-
-    user = request.scope.get("user")
-    if user is None or user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Forbidden: insufficient permissions")
 
     professor = db.query(models.Profesori).filter(models.Profesori.id == id).first()
     if professor is None:
@@ -91,7 +108,7 @@ def read_professor(id : int, request: Request, db: Session = Depends(get_db)):
         }
     }
 
-@app.get("/api/academia/professors", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/professors")
 def read_professors(request: Request,
                     nume : Optional[str] = Query(None, alias="nume"),
                     prenume : Optional[str] = Query(None, alias="prenume"),
@@ -160,7 +177,7 @@ def read_professors(request: Request,
         }
     }
 
-@app.put("/api/academia/professors/{id}", dependencies=[Security(api_key_header)])
+@app.put("/api/academia/professors/{id}")
 def update_professor(id : int, professor : schemas.ProfesorUpdate, request: Request, db : Session = Depends(get_db)):
     
     validate_admin_role(request)
@@ -180,7 +197,7 @@ def update_professor(id : int, professor : schemas.ProfesorUpdate, request: Requ
     db.commit()
     db.refresh(db_professor)
     response_data = {
-        **db_professor.__dict__,
+        **schemas.ProfesorCreate.from_orm(db_professor).dict(),
         "_links": {
             "self": {"href": f"/api/academia/professors/{id}", "method": "PUT"},
             "parent": {"href": "/api/academia/professors", "method": "GET"},
@@ -192,7 +209,7 @@ def update_professor(id : int, professor : schemas.ProfesorUpdate, request: Requ
 
     return JSONResponse(status_code=200, content=response_data)
 
-@app.delete("/api/academia/professors/{id}", dependencies=[Security(api_key_header)])
+@app.delete("/api/academia/professors/{id}")
 def delete_professor(id : int, request: Request, db : Session = Depends(get_db)):
 
     validate_admin_role(request)
@@ -201,6 +218,7 @@ def delete_professor(id : int, request: Request, db : Session = Depends(get_db))
     if db_professor is None:
         raise HTTPException(status_code = 404, detail = "Professor not found")
     db.delete(db_professor)
+    db.commit()
     response_data = {
         "message": "Professor deleted successfully",
         "_links": {
@@ -212,7 +230,7 @@ def delete_professor(id : int, request: Request, db : Session = Depends(get_db))
 
     return JSONResponse(status_code=200, content=response_data)
 
-@app.post("/api/academia/lectures", dependencies=[Security(api_key_header)])
+@app.post("/api/academia/lectures")
 def create_lecture(lecture : schemas.DisciplineCreate, request: Request, db : Session = Depends(get_db)) :
 
     validate_admin_role(request)
@@ -234,23 +252,23 @@ def create_lecture(lecture : schemas.DisciplineCreate, request: Request, db : Se
                 detail="Only professors with 'titular' association can be set as titular for a discipline"
             )
 
-    db_lectures = models.Discipline(**lecture.dict())
-    db.add(db_lectures)
+    db_lecture = models.Discipline(**lecture.dict())
+    db.add(db_lecture)
     db.commit()
-    db.refresh(db_lectures)
+    db.refresh(db_lecture)
     response_data = {
-        **lecture.__dict__,
+        **schemas.DisciplineCreate.from_orm(db_lecture).dict(),
         "_links" : {
             "self": {"href": "/api/academia/lectures", "method": "POST"},
             "parent": {"href": "/api/academia/lectures", "method": "GET"},
-            "update": {"href": f"/api/academia/lectures/{db_lectures.id}", "method": "PUT"},
-            "delete": {"href": f"/api/academia/lectures/{db_lectures.id}", "method": "DELETE"}
+            "update": {"href": f"/api/academia/lectures/{db_lecture.cod}", "method": "PUT"},
+            "delete": {"href": f"/api/academia/lectures/{db_lecture.cod}", "method": "DELETE"}
         }
     }
 
     return JSONResponse(status_code=201, content=response_data)
 
-@app.get("/api/academia/lectures/{cod}", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/lectures/{cod}")
 def read_lecture(cod : str, request: Request, db : Session = Depends(get_db)) : 
 
     validate_admin_role(request)
@@ -265,11 +283,12 @@ def read_lecture(cod : str, request: Request, db : Session = Depends(get_db)) :
             "parent": {"href": "/api/academia/lectures", "method": "GET"},
             "create": {"href": "/api/academia/lectures", "method": "POST"},
             "update": {"href": f"/api/academia/lectures/{cod}", "method": "PUT"},
-            "delete": {"href": f"/api/academia/lectures/{cod}", "method": "DELETE"}
+            "delete": {"href": f"/api/academia/lectures/{cod}", "method": "DELETE"},
+            "read_titular": {"href": f"api/academia/professors/{lecture.id_titular}", "method": "GET"}
         }
     }
 
-@app.get("/api/academia/lectures", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/lectures")
 def read_lectures(request: Request, 
                 cod : Optional[str] = Query(None, alias = "cod"),
                 nume_disciplina: Optional[str] = Query(None, alias="nume_disciplina"),
@@ -330,19 +349,20 @@ def read_lectures(request: Request,
                 "_links": {
                     "self": {"href": f"/api/academia/lectures/{discipline.cod}", "method": "GET"},
                     "update": {"href": f"/api/academia/lectures/{discipline.cod}", "method": "PUT"},
-                    "delete": {"href": f"/api/academia/lectures/{discipline.cod}", "method": "DELETE"}
+                    "delete": {"href": f"/api/academia/lectures/{discipline.cod}", "method": "DELETE"},
+                    "read_titular": {"href": f"api/academia/professors/{discipline.id_titular}", "method": "GET"}
                 }
             }
             for discipline in disciplines
         ],
         "_links": {
             "self": {"href": f"/api/academia/lectures?page={page}&items_per_page={items_per_page}", "method": "GET"},
-            "create": {"href": "/api/academia/lectures", "method": "POST"}
+            "create": {"href": "/api/academia/lectures", "method": "POST"},
         }
     }
 
 
-@app.put("/api/academia/lectures/{cod}", dependencies=[Security(api_key_header)])
+@app.put("/api/academia/lectures/{cod}")
 def update_lecture(cod : str, lecture : schemas.DisciplineUpdate, request: Request, db : Session = Depends(get_db)) : 
 
     validate_admin_role(request)
@@ -364,21 +384,23 @@ def update_lecture(cod : str, lecture : schemas.DisciplineUpdate, request: Reque
     
     db.commit()
     db.refresh(db_lecture)
+
     response_data = {
-        **db_lecture.__dict__,
+        **schemas.DisciplineUpdate.from_orm(db_lecture).dict(),
         "_links": {
             "self": {"href": f"/api/academia/lectures/{cod}", "method": "PUT"},
             "parent": {"href": "/api/academia/lectures", "method": "GET"},
             "create": {"href": "/api/academia/lectures", "method": "POST"},
             "professor": {"href": f"/api/academia/lectures/{cod}", "method" : "GET"},
-            "delete": {"href": f"/api/academia/lectures/{cod}", "method": "DELETE"}
+            "delete": {"href": f"/api/academia/lectures/{cod}", "method": "DELETE"},
+            "read_titular" : {"href": f"/api/academia/lectures/{db_lecture.id_titular}", "method" : "GET"}
         }
     }
 
     return JSONResponse(status_code=200, content=response_data)
     
 
-@app.delete("/api/academia/lectures/{cod}", dependencies=[Security(api_key_header)])
+@app.delete("/api/academia/lectures/{cod}")
 def delete_lecture(cod : str, request: Request, db : Session = Depends(get_db)) :
 
     validate_admin_role(request)
@@ -387,6 +409,7 @@ def delete_lecture(cod : str, request: Request, db : Session = Depends(get_db)) 
     if lecture is None:
         raise HTTPException(status_code = 404, detail = "Lecture not found")
     db.delete(lecture)
+    db.commit()
     response_data = {
         "message": "Lecture deleted successfully",
         "_links": {
@@ -398,7 +421,7 @@ def delete_lecture(cod : str, request: Request, db : Session = Depends(get_db)) 
 
     return JSONResponse(status_code=200, content=response_data)
 
-@app.post("/api/academia/students", dependencies=[Security(api_key_header)])
+@app.post("/api/academia/students")
 def create_student(student : schemas.StudentCreate, request: Request, db : Session = Depends(get_db)) :
 
     validate_admin_role(request)
@@ -415,7 +438,7 @@ def create_student(student : schemas.StudentCreate, request: Request, db : Sessi
     db.commit()
     db.refresh(db_student)
     response_data = {
-        **db_student.__dict__,
+        **schemas.StudentCreate.from_orm(db_student).dict(),
         "_links" : {
             "self": {"href": "/api/academia/students", "method": "POST"},
             "parent": {"href": "/api/academia/students", "method": "GET"},
@@ -427,7 +450,7 @@ def create_student(student : schemas.StudentCreate, request: Request, db : Sessi
     return JSONResponse(status_code=201, content=response_data)
 
 
-@app.get("/api/academia/students/{id}", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/students/{id}")
 def read_student(id : int, request: Request, db : Session = Depends(get_db)) : 
 
     validate_admin_role(request)
@@ -446,7 +469,7 @@ def read_student(id : int, request: Request, db : Session = Depends(get_db)) :
         }
     }
 
-@app.get("/api/academia/students", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/students")
 def read_students(request: Request, 
                     email : Optional[EmailStr] = Query(None, alias="email"),
                     nume : Optional[str] = Query(None, alias="nume"),
@@ -512,7 +535,7 @@ def read_students(request: Request,
     
     
 
-@app.put("/api/academia/students/{id}", dependencies=[Security(api_key_header)])
+@app.put("/api/academia/students/{id}")
 def update_student(id : int, student : schemas.StudentUpdate, request: Request, db : Session = Depends(get_db)) :
 
     validate_admin_role(request)
@@ -533,7 +556,7 @@ def update_student(id : int, student : schemas.StudentUpdate, request: Request, 
     db.commit()
     db.refresh(db_student)
     response_data = {
-        **db_student.__dict__,
+        **schemas.StudentUpdate.from_orm(db_student).dict(),
         "_links" : {
             "self": {"href": f"/api/academia/students/{id}", "method": "PUT"},
             "parent": {"href": "/api/academia/students", "method": "GET"},
@@ -546,7 +569,7 @@ def update_student(id : int, student : schemas.StudentUpdate, request: Request, 
     return JSONResponse(status_code=200, content=response_data)
 
 
-@app.delete("/api/academia/students/{id}", dependencies=[Security(api_key_header)])
+@app.delete("/api/academia/students/{id}")
 def delete_student(id : int, request: Request, db : Session = Depends(get_db)) : 
 
     validate_admin_role(request)
@@ -555,6 +578,7 @@ def delete_student(id : int, request: Request, db : Session = Depends(get_db)) :
     if student is None:
         raise HTTPException(status_code = 404, detail = "Student not found")
     db.delete(student)
+    db.commit()
     response_data = {
         "message": "Student deleted successfully",
         "_links": {
@@ -564,10 +588,10 @@ def delete_student(id : int, request: Request, db : Session = Depends(get_db)) :
         }
     }
 
-    return JSONResponse(status_code=201, content=response_data)
+    return JSONResponse(status_code=200, content=response_data)
 
 # unde este titular
-@app.get("/api/academia/professors/{id}/lectures", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/professors/{id}/lectures")
 def get_professors_lectures(id : int, request: Request, db : Session = Depends(get_db)) :
 
     validate_teacher_role(request)
@@ -598,7 +622,7 @@ def get_professors_lectures(id : int, request: Request, db : Session = Depends(g
     }
 
 # toate disciplinele
-@app.get("/api/academia/professors/{id}/lectures/all", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/professors/{id}/lectures/all")
 def get_all_lectures_for_professor(id: int, request: Request, db: Session = Depends(get_db)):
 
     validate_teacher_role(request)
@@ -611,7 +635,6 @@ def get_all_lectures_for_professor(id: int, request: Request, db: Session = Depe
     
     return {
         "professor_id": id,
-        "professor_name": f"{professor.nume} {professor.prenume}",
         "lectures": [
             {
                 "cod": lecture.cod,
@@ -631,7 +654,7 @@ def get_all_lectures_for_professor(id: int, request: Request, db: Session = Depe
     }
 
 
-@app.get("/api/academia/students/{id}/lectures", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/students/{id}/lectures")
 def get_student_lectures(id : int, request: Request, db : Session = Depends(get_db)) :
 
     validate_student_role(request)
@@ -661,13 +684,15 @@ def get_student_lectures(id : int, request: Request, db : Session = Depends(get_
         }
     }
 
-@app.post("/api/academia/students/{student_id}/lectures", dependencies=[Security(api_key_header)])
-def enroll_student_in_lecture(student_id : int, enrollment_data: schemas.LectureEnrollment, request: Request, db: Session = Depends(get_db)) :
+@app.post("/api/academia/students/enroll")
+def enroll_student_in_lecture(enrollment_data: schemas.LectureEnrollment, request: Request, db: Session = Depends(get_db)) :
 
     validate_admin_role(request)
 
+    student_email = enrollment_data.email
     discipline_cod = enrollment_data.discipline_cod
-    student = db.query(models.Studenti).filter(models.Studenti.id == student_id).first()
+
+    student = db.query(models.Studenti).filter(models.Studenti.email == student_email).first()
     if student is None:
         raise HTTPException(status_code = 404, detail = "Student not found")
     
@@ -676,7 +701,7 @@ def enroll_student_in_lecture(student_id : int, enrollment_data: schemas.Lecture
         raise HTTPException(status_code = 404, detail = "Discipline not found")
 
     enrollment = db.query(models.Join_DS).filter(
-        models.Join_DS.studentID == student_id, 
+        models.Join_DS.studentID == student.id, 
         models.Join_DS.disciplinaID == discipline_cod
     ).first()
 
@@ -689,27 +714,30 @@ def enroll_student_in_lecture(student_id : int, enrollment_data: schemas.Lecture
             detail=f"Student year ({student.an_studiu}) does not match discipline year ({discipline.an_studiu})"
         )
 
-    new_enrollment = models.Join_DS(studentID = student_id, disciplinaID = discipline_cod)
+    new_enrollment = models.Join_DS(studentID = student.id, disciplinaID = discipline_cod)
     db.add(new_enrollment)
     db.commit()
     response_data = {
-        "student_id" : student_id,
+        "student_id" : student.email,
         "discipline_cod" : discipline_cod,
         "_links" : {
-            "self" : {"href": f"/api/academia/students/{student_id}/lectures", "method": "POST"},
-            "parent" : {"href": f"/api/academia/students/{student_id}", "method": "GET"},
-            "delete" : {"href": f"/api/academia/students/{student_id}/lectures/{discipline_cod}", "method": "DELETE"}
+            "self" : {"href": f"/api/academia/students/enroll", "method": "POST"},
+            "parent" : {"href": f"/api/academia/students/{student.id}", "method": "GET"},
+            "delete" : {"href": f"/api/academia/students/unenroll", "method": "DELETE"}
         }
     }
 
     return JSONResponse(status_code=201, content=response_data)
 
-@app.delete("/api/academia/students/{student_id}/lectures/{discipline_cod}", dependencies=[Security(api_key_header)])
-def unenroll_student_from_lecture(student_id: int, discipline_cod: str, request: Request, db: Session = Depends(get_db)):
+@app.post("/api/academia/students/unenroll")
+def unenroll_student_from_lecture(enrollment_data: schemas.LectureEnrollment, request: Request, db: Session = Depends(get_db)):
 
     validate_admin_role(request)
 
-    student = db.query(models.Studenti).filter(models.Studenti.id == student_id).first()
+    student_email = enrollment_data.email
+    discipline_cod = enrollment_data.discipline_cod
+
+    student = db.query(models.Studenti).filter(models.Studenti.email == student_email).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
@@ -718,7 +746,7 @@ def unenroll_student_from_lecture(student_id: int, discipline_cod: str, request:
         raise HTTPException(status_code=404, detail="Discipline not found")
 
     enrollment = db.query(models.Join_DS).filter(
-        models.Join_DS.studentID == student_id,
+        models.Join_DS.studentID == student.id,
         models.Join_DS.disciplinaID == discipline_cod
     ).first()
 
@@ -730,25 +758,25 @@ def unenroll_student_from_lecture(student_id: int, discipline_cod: str, request:
 
     response_data = {
         "message": "Student unenrolled successfully",
-        "student_id": student.email,
+        "student_email": student.email,
         "discipline_cod": discipline_cod,
         "_links": {
-            "self" : {"href": f"/api/academia/students/{student_id}/lectures/{discipline_cod}", "method": "DELETE"},
-            "parent" : {"href": f"/api/academia/students/{student_id}", "method": "GET"},
-            "create" : {"href": f"/api/academia/students/{student_id}/lectures", "method": "POST"}
+            "self" : {"href": f"/api/academia/students/unenroll", "method": "POST"},
+            "parent" : {"href": f"/api/academia/students/{student.id}", "method": "GET"},
+            "create" : {"href": f"/api/academia/students/{student.id}/lectures", "method": "POST"}
         }
     }
 
-    return JSONResponse(status_code=200, content=response_data)
+    return JSONResponse(status_code=201, content=response_data)
 
-@app.get("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/students", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/students")
 def get_students_for_specific_discipline(professor_id: int, discipline_cod: str, request: Request, db: Session = Depends(get_db)):
 
     user = request.scope.get("user")
     username = user.get("username")
     role = user.get("role")
 
-    if role != "professor":
+    if role != "teacher":
         raise HTTPException(status_code=403, detail="Access forbidden: Only professors can access this resource")
 
     profesor = db.query(models.Profesori).filter(models.Profesori.email == username).first()
@@ -787,7 +815,7 @@ def get_students_for_specific_discipline(professor_id: int, discipline_cod: str,
         }
     }
 
-@app.post("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/evaluare", dependencies=[Security(api_key_header)])
+@app.post("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/evaluare")
 def create_evaluation(professor_id : int, discipline_cod : str, enrollment_data: schemas.LectureEnrollment_Evaluation, request: Request, db: Session = Depends(get_db)) :
 
     validate_teacher_role(request)
@@ -800,19 +828,25 @@ def create_evaluation(professor_id : int, discipline_cod : str, enrollment_data:
     if discipline is None :
         raise HTTPException(status_code = 404, detail = "Discipline not found or not managed by this professor")
 
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ")[1]
+
     mongo_request_data = {
         "disciplina" : discipline_cod,
         "probe" : enrollment_data.probe
     }
 
+    mongo_headers = {"Authorization": f"Bearer {token}"}
     mongo_service_url = "http://app:8001/evaluare/"
-    response = requests.post(mongo_service_url, json = mongo_request_data)
+    response = requests.post(mongo_service_url, json = mongo_request_data, headers=mongo_headers)
 
     if response.status_code == 400:
         raise HTTPException(status_code=400, detail="Invalid data provided for evaluation creation")
     elif response.status_code == 500:
         raise HTTPException(status_code=500, detail="Internal server error from Mongo service")
-    elif response.status_code != 200:
+    elif response.status_code != 201:
         raise HTTPException(status_code=response.status_code, detail=response.json().get("detail", "Unknown error from Mongo service"))
 
     response_data = {
@@ -828,7 +862,7 @@ def create_evaluation(professor_id : int, discipline_cod : str, enrollment_data:
 
     return JSONResponse(status_code=201, content=response_data)
 
-@app.post("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/materiale", dependencies=[Security(api_key_header)])
+@app.post("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/materiale")
 def create_materials(professor_id : int, discipline_cod : str, material_data : dict, request: Request, db: Session = Depends(get_db)) :
 
     validate_teacher_role(request)
@@ -841,19 +875,25 @@ def create_materials(professor_id : int, discipline_cod : str, material_data : d
     if discipline is None:
         raise HTTPException(status_code = 404, detail = "Discipline not found or not managed by this professor")
     
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ")[1]
+
     mongo_request_data = {
         "disciplina" : discipline_cod,
         **material_data
     }
 
+    mongo_headers = {"Authorization": f"Bearer {token}"}
     mongo_service_url = "http://app:8001/materiale/"
-    response = requests.post(mongo_service_url, json=mongo_request_data)
+    response = requests.post(mongo_service_url, json=mongo_request_data, headers=mongo_headers)
 
     if response.status_code == 400:
         raise HTTPException(status_code=400, detail="Invalid data provided for material creation")
     elif response.status_code == 500:
         raise HTTPException(status_code=500, detail="Internal server error from Mongo service")
-    elif response.status_code != 200:
+    elif response.status_code != 201:
         raise HTTPException(status_code=response.status_code, detail=response.json().get("detail", "Unknown error from Mongo service"))
 
     response_data = {
@@ -869,7 +909,7 @@ def create_materials(professor_id : int, discipline_cod : str, material_data : d
 
     return JSONResponse(status_code=201, content=response_data)
 
-@app.put("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/evaluare", dependencies=[Security(api_key_header)])
+@app.put("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/evaluare")
 def update_evaluation(professor_id : int, discipline_cod : str, enrollment_data: schemas.LectureEnrollment_Evaluation, request: Request, db: Session = Depends(get_db)) :
 
     validate_teacher_role(request)
@@ -882,13 +922,19 @@ def update_evaluation(professor_id : int, discipline_cod : str, enrollment_data:
     if discipline is None :
         raise HTTPException(status_code = 404, detail = "Discipline not found or not managed by this professor.")
 
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ")[1]
+
     mongo_request_data = {
         "disciplina" : discipline_cod,
         "probe" : enrollment_data.probe
     }
 
+    mongo_headers = {"Authorization": f"Bearer {token}"}
     mongo_service_url = f"http://app:8001/evaluare/{discipline_cod}"
-    response = requests.put(mongo_service_url, json=mongo_request_data)
+    response = requests.put(mongo_service_url, json=mongo_request_data, headers=mongo_headers)
 
     if response.status_code == 400:
         raise HTTPException(status_code=400, detail="Invalid data provided for evaluation update")
@@ -910,7 +956,7 @@ def update_evaluation(professor_id : int, discipline_cod : str, enrollment_data:
 
     return JSONResponse(status_code=200, content=response_data)
 
-@app.put("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/materiale", dependencies=[Security(api_key_header)])
+@app.put("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/materiale")
 def update_materials(professor_id: int, discipline_cod: str, material_data: dict, request: Request, db: Session = Depends(get_db)):
 
     validate_teacher_role(request)
@@ -923,13 +969,19 @@ def update_materials(professor_id: int, discipline_cod: str, material_data: dict
     if discipline is None:
         raise HTTPException(status_code=404, detail="Discipline not found or not managed by this professor")
 
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ")[1]
+
     mongo_request_data = {
         "disciplina": discipline_cod,
         **material_data
     }
 
+    mongo_headers = {"Authorization": f"Bearer {token}"}
     mongo_service_url = f"http://app:8001/materiale/{discipline_cod}"
-    response = requests.put(mongo_service_url, json=mongo_request_data)
+    response = requests.put(mongo_service_url, json=mongo_request_data, headers=mongo_headers)
 
     if response.status_code == 400:
         raise HTTPException(status_code=400, detail="Invalid data provided for material creation")
@@ -951,7 +1003,7 @@ def update_materials(professor_id: int, discipline_cod: str, material_data: dict
 
     return JSONResponse(status_code=201, content=response_data)
 
-@app.get("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/evaluare", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/evaluare")
 def get_evaluation(professor_id: int, discipline_cod: str, request: Request, db: Session = Depends(get_db)):
 
     validate_teacher_role(request)
@@ -964,8 +1016,14 @@ def get_evaluation(professor_id: int, discipline_cod: str, request: Request, db:
     if discipline is None :
         raise HTTPException(status_code=404, detail="Discipline not found or not managed by this professor")
 
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ")[1]
+
+    mongo_headers = {"Authorization": f"Bearer {token}"}
     mongo_service_url = f"http://app:8001/evaluare/{discipline_cod}"
-    response = requests.get(mongo_service_url)
+    response = requests.get(mongo_service_url, headers=mongo_headers)
 
     if response.status_code == 404:
         raise HTTPException(status_code=404, detail="Evaluation not found for the specified discipline")
@@ -986,7 +1044,7 @@ def get_evaluation(professor_id: int, discipline_cod: str, request: Request, db:
         }
     }
 
-@app.get("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/materiale", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/materiale")
 def get_materials(professor_id: int, discipline_cod: str, request: Request, db: Session = Depends(get_db)):
 
     validate_teacher_role(request)
@@ -999,8 +1057,14 @@ def get_materials(professor_id: int, discipline_cod: str, request: Request, db: 
     if discipline is None:
         raise HTTPException(status_code=404, detail="Discipline not found or not managed by this professor")
 
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ")[1]
+
+    mongo_headers = {"Authorization": f"Bearer {token}"}
     mongo_service_url = f"http://app:8001/materiale/{discipline_cod}"
-    response = requests.get(mongo_service_url)
+    response = requests.get(mongo_service_url, headers=mongo_headers)
 
     if response.status_code == 404:
         raise HTTPException(status_code=404, detail="Material not found for the specified discipline")
@@ -1021,7 +1085,7 @@ def get_materials(professor_id: int, discipline_cod: str, request: Request, db: 
         }
     }
 
-@app.get("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/evaluare/materiale", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/evaluare/materiale")
 def get_discipline_details(professor_id: int, discipline_cod: str, request: Request, db: Session = Depends(get_db)):
 
     validate_teacher_role(request)
@@ -1034,11 +1098,17 @@ def get_discipline_details(professor_id: int, discipline_cod: str, request: Requ
     if discipline is None:
         raise HTTPException(status_code=404, detail="Discipline not found or not managed by this professor")
 
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ")[1]
+
     mongo_service_url_evaluare = f"http://app:8001/evaluare/{discipline_cod}"
     mongo_service_url_materiale = f"http://app:8001/materiale/{discipline_cod}"
 
-    response_evaluare = requests.get(mongo_service_url_evaluare)
-    response_materiale = requests.get(mongo_service_url_materiale)
+    mongo_headers = {"Authorization": f"Bearer {token}"}
+    response_evaluare = requests.get(mongo_service_url_evaluare, headers=mongo_headers)
+    response_materiale = requests.get(mongo_service_url_materiale, headers=mongo_headers)
 
     if response_evaluare.status_code == 404:
         raise HTTPException(status_code=404, detail="Evaluation not found for the specified discipline")
@@ -1071,7 +1141,7 @@ def get_discipline_details(professor_id: int, discipline_cod: str, request: Requ
         }
     }
 
-@app.delete("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/evaluare", dependencies=[Security(api_key_header)])
+@app.delete("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/evaluare")
 def delete_evaluation(professor_id: int, discipline_cod: str, request: Request, db: Session = Depends(get_db)):
 
     validate_teacher_role(request)
@@ -1084,8 +1154,14 @@ def delete_evaluation(professor_id: int, discipline_cod: str, request: Request, 
     if discipline is None:
         raise HTTPException(status_code=404, detail="Discipline not found or not managed by this professor")
 
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ")[1]
+
+    mongo_headers = {"Authorization": f"Bearer {token}"}
     mongo_service_url = f"http://app:8001/evaluare/{discipline_cod}"
-    response = requests.delete(mongo_service_url)
+    response = requests.delete(mongo_service_url, headers=mongo_headers)
 
     if response.status_code == 404:
         raise HTTPException(status_code=404, detail="Material not found for the specified discipline")
@@ -1108,7 +1184,7 @@ def delete_evaluation(professor_id: int, discipline_cod: str, request: Request, 
     return JSONResponse(status_code=200, content=response_data)
 
 
-@app.delete("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/materiale", dependencies=[Security(api_key_header)])
+@app.delete("/api/academia/professors/{professor_id}/lectures/{discipline_cod}/materiale")
 def delete_materials(professor_id: int, discipline_cod: str, request: Request, db: Session = Depends(get_db)):
 
     validate_teacher_role(request)
@@ -1121,8 +1197,14 @@ def delete_materials(professor_id: int, discipline_cod: str, request: Request, d
     if discipline is None:
         raise HTTPException(status_code=404, detail="Discipline not found or not managed by this professor")
 
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ")[1]
+
+    mongo_headers = {"Authorization": f"Bearer {token}"}
     mongo_service_url = f"http://app:8001/materiale/{discipline_cod}"
-    response = requests.delete(mongo_service_url)
+    response = requests.delete(mongo_service_url, headers=mongo_headers)
 
     if response.status_code == 404:
         raise HTTPException(status_code=404, detail="Material not found for the specified discipline")
@@ -1145,7 +1227,7 @@ def delete_materials(professor_id: int, discipline_cod: str, request: Request, d
     return JSONResponse(status_code=200, content=response_data)
 
 
-@app.get("/api/academia/students/{student_id}/lectures/{discipline_cod}/evaluare", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/students/{student_id}/lectures/{discipline_cod}/evaluare")
 def get_student_evaluare(student_id : int, discipline_cod : str, request: Request, db : Session = Depends(get_db)) : 
 
     validate_student_role(request)
@@ -1162,8 +1244,14 @@ def get_student_evaluare(student_id : int, discipline_cod : str, request: Reques
     if enrollment is None : 
         raise HTTPException(status_code=403, detail="Student is not enrolled in this discipline")
 
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ")[1]
+
+    mongo_headers = {"Authorization": f"Bearer {token}"}
     mongo_service_url = f"http://app:8001/evaluare/{discipline_cod}"
-    response = requests.get(mongo_service_url)
+    response = requests.get(mongo_service_url, headers=mongo_headers)
 
     if response.status_code == 404:
         raise HTTPException(status_code=404, detail="Evaluation not found for the specified discipline")
@@ -1181,7 +1269,7 @@ def get_student_evaluare(student_id : int, discipline_cod : str, request: Reques
         }
     }
 
-@app.get("/api/academia/students/{student_id}/lectures/{discipline_cod}/materiale", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/students/{student_id}/lectures/{discipline_cod}/materiale")
 def get_student_materiale(student_id : int, discipline_cod : str, request: Request, db : Session = Depends(get_db)) : 
 
     validate_student_role(request)
@@ -1198,8 +1286,14 @@ def get_student_materiale(student_id : int, discipline_cod : str, request: Reque
     if enrollment is None : 
         raise HTTPException(status_code=403, detail="Student is not enrolled in this discipline")
 
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ")[1]
+
+    mongo_headers = {"Authorization": f"Bearer {token}"}
     mongo_service_url = f"http://app:8001/materiale/{discipline_cod}"
-    response = requests.get(mongo_service_url)
+    response = requests.get(mongo_service_url, headers=mongo_headers)
 
     if response.status_code == 404:
         raise HTTPException(status_code=404, detail="Material not found for the specified discipline")
@@ -1217,7 +1311,7 @@ def get_student_materiale(student_id : int, discipline_cod : str, request: Reque
         }
     }
 
-@app.get("/api/academia/students/{student_id}/lectures/{discipline_cod}/evaluare/materiale", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/students/{student_id}/lectures/{discipline_cod}/evaluare/materiale")
 def get_student_evaluare_and_materiale(student_id: int, discipline_cod: str, request: Request, db: Session = Depends(get_db)) :
 
     validate_student_role(request)
@@ -1234,11 +1328,17 @@ def get_student_evaluare_and_materiale(student_id: int, discipline_cod: str, req
     if enrollment is None :
         raise HTTPException(status_code=403, detail="Student is not enrolled in this discipline")
 
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ")[1]
+    
+    mongo_headers = {"Authorization": f"Bearer {token}"}
     mongo_service_url_evaluare = f"http://app:8001/evaluare/{discipline_cod}"
     mongo_service_url_materiale = f"http://app:8001/materiale/{discipline_cod}"
 
-    response_evaluare = requests.get(mongo_service_url_evaluare)
-    response_materiale = requests.get(mongo_service_url_materiale)
+    response_evaluare = requests.get(mongo_service_url_evaluare, headers=mongo_headers)
+    response_materiale = requests.get(mongo_service_url_materiale, headers=mongo_headers)
 
     if response_evaluare.status_code == 404:
         raise HTTPException(status_code=404, detail="Evaluation not found for the specified discipline")
@@ -1265,18 +1365,19 @@ def get_student_evaluare_and_materiale(student_id: int, discipline_cod: str, req
         }
     }
 
-@app.post("/api/academia/lectures/{discipline_cod}/colaborators", dependencies=[Security(api_key_header)])
-def add_colaborator(discipline_cod: str, colaborator_data: schemas.AddCollaboratorRequest, request: Request, db: Session = Depends(get_db)):
+@app.post("/api/academia/lectures/colaborators/add")
+def add_colaborator(colaborator_data: schemas.LectureEnrollment, request: Request, db: Session = Depends(get_db)):
     
     validate_admin_role(request)
 
-    profesor_id = colaborator_data.profesor_id
+    email = colaborator_data.email
+    discipline_cod = colaborator_data.discipline_cod
 
     discipline = db.query(models.Discipline).filter(models.Discipline.cod == discipline_cod).first()
     if not discipline:
         raise HTTPException(status_code=404, detail="Discipline not found")
 
-    profesor = db.query(models.Profesori).filter(models.Profesori.id == profesor_id).first()
+    profesor = db.query(models.Profesori).filter(models.Profesori.email == email).first()
     if not profesor:
         raise HTTPException(status_code=404, detail="Professor not found")
 
@@ -1284,31 +1385,31 @@ def add_colaborator(discipline_cod: str, colaborator_data: schemas.AddCollaborat
         raise HTTPException(status_code=422, detail="Only 'asociat' or 'extern' professors can be collaborators")
 
     existing_colab = db.query(models.ColaboratoriDiscipline).filter(
-        models.ColaboratoriDiscipline.id_profesor == profesor_id,
+        models.ColaboratoriDiscipline.id_profesor == profesor.id,
         models.ColaboratoriDiscipline.cod_disciplina == discipline_cod
     ).first()
 
     if existing_colab:
         raise HTTPException(status_code=409, detail="Professor is already a collaborator for this discipline")
 
-    new_colab = models.ColaboratoriDiscipline(id_profesor=profesor_id, cod_disciplina=discipline_cod)
+    new_colab = models.ColaboratoriDiscipline(id_profesor=profesor.id, cod_disciplina=discipline_cod)
     db.add(new_colab)
     db.commit()
 
     response_data = {
         "message": "Collaborator added successfully",
-        "professor_name": profesor.email,
+        "professor_email": profesor.email,
         "discipline_cod": discipline_cod,
         "_links": {
-            "self": {"href": f"/api/academia/lectures/{discipline_cod}/colaborators", "method": "POST"},
+            "self": {"href": f"/api/academia/lectures/colaborators", "method": "POST"},
             "parent": {"href": f"/api/academia/lectures/{discipline_cod}/colaborators", "method": "GET"},
-            "delete": {"href": f"/api/academia/lectures/{discipline_cod}/colaborators/{profesor_id}", "method": "DELETE"}
+            "remove": {"href": f"/api/academia/lectures/colaborators/remove", "method": "POST"}
         }
     }
 
     return JSONResponse(status_code=201, content=response_data)
 
-@app.get("/api/academia/lectures/{discipline_cod}/colaborators", dependencies=[Security(api_key_header)])
+@app.get("/api/academia/lectures/{discipline_cod}/colaborators")
 def get_colaborators(discipline_cod: str, request: Request, db: Session = Depends(get_db)):
 
     user = request.scope.get("user")
@@ -1357,10 +1458,17 @@ def get_colaborators(discipline_cod: str, request: Request, db: Session = Depend
         }
     }
 
-@app.delete("/api/academia/lectures/{discipline_cod}/colaborators/{profesor_id}", dependencies=[Security(api_key_header)])
-def delete_colaborator(discipline_cod: str, profesor_id: int, request: Request, db: Session = Depends(get_db)):
+@app.post("/api/academia/lectures/colaborators/remove")
+def remove_colaborator(colaborator_data: schemas.LectureEnrollment, request: Request, db: Session = Depends(get_db)):
 
-    user = validate_admin_role(request)
+    validate_admin_role(request)
+
+    email = colaborator_data.email
+    discipline_cod = colaborator_data.discipline_cod
+
+    profesor = db.query(models.Profesori).filter(models.Profesori.email == email).first()
+    if not profesor:
+        raise HTTPException(status_code=404, detail="Professor not found")
 
     discipline = db.query(models.Discipline).filter(models.Discipline.cod == discipline_cod).first()
     if not discipline:
@@ -1368,7 +1476,7 @@ def delete_colaborator(discipline_cod: str, profesor_id: int, request: Request, 
 
     colaborator = db.query(models.ColaboratoriDiscipline).filter(
         models.ColaboratoriDiscipline.cod_disciplina == discipline_cod,
-        models.ColaboratoriDiscipline.id_profesor == profesor_id
+        models.ColaboratoriDiscipline.id_profesor == profesor.id
     ).first()
 
     if not colaborator:
@@ -1381,15 +1489,11 @@ def delete_colaborator(discipline_cod: str, profesor_id: int, request: Request, 
         "message": "Collaborator removed successfully",
         "discipline_cod": discipline_cod,
         "_links": {
-            "self": {"href": f"/api/academia/lectures/{discipline_cod}/colaborators/{profesor_id}", "method": "DELETE"},
+            "self": {"href": f"/api/academia/lectures/colaborators/remove", "method": "POST"},
             "parent": {"href": f"/api/academia/lectures/{discipline_cod}/colaborators", "method": "GET"},
-            "create": {"href": f"/api/academia/lectures/{discipline_cod}/colaborators", "method": "POST"},
+            "add": {"href": f"/api/academia/lectures/colaborators/add", "method": "POST"},
         }
     }
 
-    return JSONResponse(status_code=200, content=response_data)
-
-# de securizat ca primul microserviciu la microserviciul 3(Securizat, i endpoint-ul RESTful discipline s, i actualizat, i descriptorii OpenAPI astfel încât sa indicat, i route-ele protejate
-# prin header-ul HTTP Authorization.) - asta este de facut
-# trebuie verificat in clasa middleware adresa spre microserviciul 3(si in ala cu mongo daca se va face o apelare spre microserviciul 3)
+    return JSONResponse(status_code=201, content=response_data)
 

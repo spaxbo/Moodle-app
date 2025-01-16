@@ -74,9 +74,13 @@ This microservice focuses on building the user interface for the LMS platform us
 
 #### **Functionalities**  
 - **Teacher Dashboard**: Allows teachers to manage courses, add materials, and evaluations.  
-- **Student Dashboard**: Enables students to view courses, materials, and complete evaluations.  
+- **Student Dashboard**: Enables students to view courses, materials and evaluations.  
 
 #### **Technologies Used**  
-- **React**: For building a responsive and dynamic frontend.  
+- **React**: For building a responsive and dynamic frontend.
+- **Next.js**: For server-side rendering (SSR), static site generation (SSG), and better SEO.
+- **Tailwind CSS**: For rapid styling using utility-first CSS classes.
+- **Npm**: As the package manager to manage dependencies.
+- **TypeScript**: For adding static typing and improving code maintainability. 
 
 ---

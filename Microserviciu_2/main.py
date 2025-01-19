@@ -1,8 +1,9 @@
 from fastapi import FastAPI, HTTPException, Request
 from pymongo import MongoClient
 from bson import ObjectId
+from typing import Optional
 from pydantic import BaseModel
-from schemas import Proba, Evaluare, Materiale
+from schemas import Proba, Evaluare, Materiale, Material
 from middleware import TokenValidationMiddleware
 
 client = MongoClient("mongodb://mongodb:27017")
@@ -18,11 +19,15 @@ app.add_middleware(TokenValidationMiddleware)
 
 def validate_teacher_role(request: Request):
     user = request.scope.get("user")
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized: User not authenticated")
     if user is None or user.get("role") != "teacher":
         raise HTTPException(status_code=403, detail="Forbidden: insufficient permissions")
 
 def validate_get(request : Request):
     user = request.scope.get("user")
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized: User not authenticated")
     if user is None or user.get("role") == "admin":
         raise HTTPException(status_code=403, detail="Forbidden: insufficient permissions")
 
@@ -49,9 +54,6 @@ async def create_materials(materiale : Materiale, request: Request) :
 
     validate_teacher_role(request)
 
-    if db.materiale.find_one({"disciplina": materiale.disciplina, "tip_material": materiale.tip_material}):
-        raise HTTPException(status_code=409, detail="The materials for this discipline already exists")
-
     result = db.materiale.insert_one(materiale.dict())
     return item_helper(db.materiale.find_one({"_id" : result.inserted_id}))
 
@@ -66,24 +68,18 @@ async def get_evaluation(disciplina : str, request: Request) :
 
     return item_helper(evaluare)
 
+
 @app.get("/materiale/{disciplina}")
-async def get_materials(disciplina : str, request: Request):
+async def get_materiale(disciplina : str, request: Request) :
 
     validate_get(request)
-    materials = list(db.materiale.find({"disciplina": disciplina}))
-    if not materials:
-        raise HTTPException(status_code=404, detail="The materials for this lecture do not exist")
-
-    return [item_helper(m) for m in materials]
+    materiale = db.materiale.find({"disciplina" : disciplina})
+    return [item_helper(m) for m in materiale]
 
 @app.put("/materiale/{disciplina}", status_code=200)
 async def update_materials(disciplina: str, updated_materiale: Materiale, request: Request):
 
     validate_teacher_role(request)
-
-    existing_material = db.materiale.find_one({"disciplina" : disciplina, "tip_material" : updated_materiale.tip_material})
-    if not existing_material :
-        raise HTTPException(status_code=404, detail="The materials for this lecture do not exist")
 
     if updated_materiale.material.pdf and updated_materiale.material.structurat :
         raise HTTPException(status_code=422, detail="It can be introduced only pdf or structured schema, not both")
@@ -130,15 +126,12 @@ async def delete_evaluation(disciplina: str, request: Request):
     }
 
 @app.delete("/materiale/{disciplina}", status_code=200)
-async def delete_materials(disciplina: str, request: Request):
-
-    validate_teacher_role(request)
-
+async def delete_materials(disciplina: str):
     existing_material = db.materiale.find_one({"disciplina": disciplina})
     if not existing_material :
         raise HTTPException(status_code=404, detail="The materials for this lecture do not exist")
     
-    db.materiale.delete_one({"disciplina": disciplina})
+    db.materiale.delete_many({"disciplina": disciplina})
 
     return {
         "deleted_material": item_helper(existing_material),

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import './globals.css';
 
@@ -10,6 +10,10 @@ const LoginComponent = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    document.title = "Moodle";
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,12 +34,10 @@ const LoginComponent = () => {
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
+        if (response.status === 401 || response.status === 500) {
           throw new Error("Invalid email or password.");
         } else if (response.status === 403) {
           throw new Error("Access denied.");
-        } else {
-          throw new Error(`Login failed with status ${response.status}`);
         }
       }
 
@@ -64,7 +66,7 @@ const LoginComponent = () => {
           router.push("/admin");
         }
         else{
-          const idResponse = await fetch(`http://localhost:8000/api/academia/${userEmail}`, {
+          const idResponse = await fetch(`http://localhost:8000/api/academia?email=${userEmail}`, {
             method: 'GET',
             headers: {
               Authorization: `Bearer ${data.token}`,

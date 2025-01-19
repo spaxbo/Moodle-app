@@ -15,8 +15,8 @@ const AdminDashboard = () => {
   const [selectedCycle, setSelectedCycle] = useState<string | null>(null);
   const [successMessageEnroll, setSuccessMessageEnroll] = useState<string | null>(null);
   const [successMessageUnenroll, setSuccessMessageUnenroll] = useState<string | null>(null);
-  const [successMessageAddColaborator, setSuccessMessageAddColaborator] = useState<string | null>(null);
-  const [successMessageRemoveColaborator, setSuccessMessageRemoveColaborator] = useState<string | null>(null);
+  const [successMessageAddCollaborator, setSuccessMessageAddCollaborator] = useState<string | null>(null);
+  const [successMessageRemoveCollaborator, setSuccessMessageRemoveCollaborator] = useState<string | null>(null);
   const [currentPageTeachers, setCurrentPageTeachers] = useState(1);
   const [itemsPerPageTeachers, setItemsPerPageTeachers] = useState(2);
   const [currentPageStudents, setCurrentPageStudents] = useState(1);
@@ -31,11 +31,11 @@ const AdminDashboard = () => {
     email: "",
     discipline_cod: "",
   });
-  const [formDataAddColaborator, setFormDataAddColaborator] = useState({
+  const [formDataAddCollaborator, setFormDataAddCollaborator] = useState({
     email: "",
     discipline_cod: "",
   });
-  const [formDataRemoveColaborator, setFormDataRemoveColaborator] = useState({
+  const [formDataRemoveCollaborator, setFormDataRemoveCollaborator] = useState({
     email: "",
     discipline_cod: "",
   });
@@ -109,12 +109,12 @@ const AdminDashboard = () => {
     setFormDataUnenroll({ ...formDataUnenroll, [e.target.name]: e.target.value });
   };
 
-  const handleInputChangeAddColaborator = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormDataAddColaborator({ ...formDataAddColaborator, [e.target.name]: e.target.value });
+  const handleInputChangeAddCollaborator = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormDataAddCollaborator({ ...formDataAddCollaborator, [e.target.name]: e.target.value });
   };
 
-  const handleInputChangeRemoveColaborator = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormDataRemoveColaborator({ ...formDataRemoveColaborator, [e.target.name]: e.target.value });
+  const handleInputChangeRemoveCollaborator = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormDataRemoveCollaborator({ ...formDataRemoveCollaborator, [e.target.name]: e.target.value });
   };
   
   const fetchProfessors = async ( page: number = 1,
@@ -142,7 +142,7 @@ const AdminDashboard = () => {
         },
       });
       if(!response.ok){
-        throw new Error("Failed to fetch professors: ${response.statusText}");
+        throw new Error(`Failed to fetch professors: ${response.statusText}`);
       }
       const data = await response.json();
       setProfessors(data.professors || []);
@@ -196,7 +196,7 @@ const AdminDashboard = () => {
         },
       });
       if(!response.ok){
-        throw new Error("Failed to fetch students: ${response.statusText}");
+        throw new Error(`Failed to fetch students: ${response.statusText}`);
       }
       const data = await response.json();
       setStudents(data.students || []);
@@ -238,7 +238,7 @@ const AdminDashboard = () => {
         },
       });
       if(!response.ok){
-        throw new Error("Failed to fetch lectures: ${response.statusText}");
+        throw new Error(`Failed to fetch lectures: ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -336,7 +336,7 @@ const AdminDashboard = () => {
       });
 
       if(!response.ok){
-        throw new Error("Failed to delete professor: ${response.statusText}");
+        throw new Error(`Failed to delete professor: ${response.statusText}`);
       }
 
       const responseIDM = await fetch("http://localhost:8080/deleteUser", {
@@ -351,7 +351,7 @@ const AdminDashboard = () => {
       });
 
       if(!responseIDM.ok){
-        throw new Error("Failed to delete IDM user: ${responseIDM.statusText}");
+        throw new Error(`Failed to delete IDM user: ${responseIDM.statusText}`);
       }
 
       setProfessors((prev) => prev.filter((prof:any) => prof.id !== professorId));
@@ -386,7 +386,7 @@ const AdminDashboard = () => {
       });
 
       if(!response.ok){
-        throw new Error("Failed to delete student: ${response.statusText}");
+        throw new Error(`Failed to delete student: ${response.statusText}`);
       }
 
       const responseIDM = await fetch("http://localhost:8080/deleteUser", {
@@ -401,7 +401,7 @@ const AdminDashboard = () => {
       });
 
       if(!responseIDM.ok){
-        throw new Error("Failed to delete IDM user: ${responseIDM.statusText}");
+        throw new Error(`Failed to delete IDM user: ${responseIDM.statusText}`);
       }
 
       setStudents((prev) => prev.filter((stud:any) => stud.id !== studentId));
@@ -435,7 +435,7 @@ const AdminDashboard = () => {
       });
 
       if(!response.ok){
-        throw new Error("Failed to delete student: ${response.statusText}");
+        throw new Error(`Failed to delete student: ${response.statusText}`);
       }
 
       setLectures((prev) => prev.filter((stud:any) => stud.cod !== lectureCode));
@@ -515,11 +515,11 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleSubmitAddColaborator = async (e: React.FormEvent) => {
+  const handleSubmitAddCollaborator = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setSuccessMessageAddColaborator(null);
+    setSuccessMessageAddCollaborator(null);
 
     try {
       const token = window.localStorage.getItem("token");
@@ -527,22 +527,22 @@ const AdminDashboard = () => {
         throw new Error("Authentication token is missing");
       }
 
-      const response = await fetch("http://localhost:8000/api/academia/lectures/colaborators/add", {
+      const response = await fetch("http://localhost:8000/api/academia/lectures/collaborators/add", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formDataAddColaborator),
+        body: JSON.stringify(formDataAddCollaborator),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.detail || "Failed to add colaborator");
+        throw new Error(data.detail || "Failed to add collaborator");
       }
 
-      setSuccessMessageAddColaborator("Colaborator added successfully!");
-      setFormDataAddColaborator({ email: "", discipline_cod: "" });
+      setSuccessMessageAddCollaborator("Collaborator added successfully!");
+      setFormDataAddCollaborator({ email: "", discipline_cod: "" });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -550,11 +550,11 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleSubmitRemoveColaborator = async (e: React.FormEvent) => {
+  const handleSubmitRemoveCollaborator = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setSuccessMessageRemoveColaborator(null);
+    setSuccessMessageRemoveCollaborator(null);
 
     try {
       const token = window.localStorage.getItem("token");
@@ -562,22 +562,22 @@ const AdminDashboard = () => {
         throw new Error("Authentication token is missing");
       }
 
-      const response = await fetch("http://localhost:8000/api/academia/lectures/colaborators/remove", {
+      const response = await fetch("http://localhost:8000/api/academia/lectures/collaborators/remove", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formDataRemoveColaborator),
+        body: JSON.stringify(formDataRemoveCollaborator),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.detail || "Failed to remove colaborator");
+        throw new Error(data.detail || "Failed to remove collaborator");
       }
 
-      setSuccessMessageRemoveColaborator("Colaborator removed successfully!");
-      setFormDataRemoveColaborator({ email: "", discipline_cod: "" });
+      setSuccessMessageRemoveCollaborator("Collaborator removed successfully!");
+      setFormDataRemoveCollaborator({ email: "", discipline_cod: "" });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -682,94 +682,94 @@ const AdminDashboard = () => {
         );
       case "lectures":
         return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-4">Lectures</h1>
-      <div className="flex justify-center gap-12 mb-20">
-        <button
-          onClick={() => router.push("admin/lectures_create")}
-          className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
-        >
-          Create Lecture
-        </button>
-        <select
-          value={selectedExamination || ""}
-          onChange={handleExaminationChange}
-          className="bg-purple-500 text-white border border-purple-700 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-purple-300"
-        >
-          <option value="">Examination Type</option>
-          <option value="examen">examen</option>
-          <option value="colocviu">colocviu</option>
-        </select>
-        <input
-          type="number"
-          min="1"
-          value={currentPageLectures}
-          onChange={(e) => handlePageChangeLectures(Number(e.target.value))}
-          className="w-20 bg-gray-100 border border-gray-500 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-300"
-          placeholder="Page"
-        />
+        <div className="p-8">
+          <h1 className="text-2xl font-bold mb-4">Lectures</h1>
+          <div className="flex justify-center gap-12 mb-20">
+            <button
+              onClick={() => router.push("admin/lectures_create")}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+            >
+              Create Lecture
+            </button>
+            <select
+              value={selectedExamination || ""}
+              onChange={handleExaminationChange}
+              className="bg-purple-500 text-white border border-purple-700 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-purple-300"
+            >
+              <option value="">Examination Type</option>
+              <option value="examen">examen</option>
+              <option value="colocviu">colocviu</option>
+            </select>
+            <input
+              type="number"
+              min="1"
+              value={currentPageLectures}
+              onChange={(e) => handlePageChangeLectures(Number(e.target.value))}
+              className="w-20 bg-gray-100 border border-gray-500 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-300"
+              placeholder="Page"
+            />
 
-        <select
-          value={itemsPerPageLectures}
-          onChange={(e) => handleItemsPerPageChangeLectures(Number(e.target.value))}
-          className="bg-gray-500 text-white border border-gray-700 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-300"
-        >
-          <option value={2}>2 items</option>
-          <option value={4}>4 items</option>
-          <option value={6}>6 items</option>
-        </select>
-      </div>
-      {loading && <p className="mt-4 text-blue-500">Loading...</p>}
-      {error && <p className="mt-4 text-red-500">Error: {error}</p>}
-      {lectures.length >= 0 && (
-        <div className="mt-6">
-          <h2 className="text-xl font-bold mb-4">Lectures List</h2>
-          <table className="table-auto w-full border-collapse border border-gray-300">
-            <thead>
-              <tr>
-                <th className="border border-gray-300 px-4 py-2">Code</th>
-                <th className="border border-gray-300 px-4 py-2">Name</th>
-                <th className="border border-gray-300 px-4 py-2">Year of Study</th>
-                <th className="border border-gray-300 px-4 py-2">Discipline Type</th>
-                <th className="border border-gray-300 px-4 py-2">Discipline Category</th>
-                <th className="border border-gray-300 px-4 py-2">Examination Type</th>
-                <th className="border border-gray-300 px-4 py-2">Professor</th>
-                <th className="border border-gray-300 px-4 py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lectures.map((lecture, index) => (
-                <tr key={index}>
-                  <td className="border border-gray-300 px-4 py-2">{lecture.cod}</td>
-                  <td className="border border-gray-300 px-4 py-2">{lecture.nume_disciplina}</td>
-                  <td className="border border-gray-300 px-4 py-2">{lecture.an_studiu}</td>
-                  <td className="border border-gray-300 px-4 py-2">{lecture.tip_disciplina}</td>
-                  <td className="border border-gray-300 px-4 py-2">{lecture.categorie_disciplina}</td>
-                  <td className="border border-gray-300 px-4 py-2">{lecture.tip_examinare}</td>
-                  <td className="border border-gray-300 px-4 py-2">{lecture.professorName}</td>
-                  <td className="border border-gray-300 px-4 py-2">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => router.push(`admin/lectures_update?getMethod=${lecture._links.self.method}&getLink=${lecture._links.self.href}&updateMethod=${lecture._links.update.method}&updateLink=${lecture._links.update.href}`)}
-                        className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-700 transition"
-                      >
-                        Update
-                      </button>
-                      <button
-                        onClick={() => deleteLecture(lecture.cod)}
-                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-700 transition"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            <select
+              value={itemsPerPageLectures}
+              onChange={(e) => handleItemsPerPageChangeLectures(Number(e.target.value))}
+              className="bg-gray-500 text-white border border-gray-700 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-300"
+            >
+              <option value={2}>2 items</option>
+              <option value={4}>4 items</option>
+              <option value={6}>6 items</option>
+            </select>
+          </div>
+          {loading && <p className="mt-4 text-blue-500">Loading...</p>}
+          {error && <p className="mt-4 text-red-500">Error: {error}</p>}
+          {lectures.length >= 0 && (
+            <div className="mt-6">
+              <h2 className="text-xl font-bold mb-4">Lectures List</h2>
+              <table className="table-auto w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr>
+                    <th className="border border-gray-300 px-4 py-2">Code</th>
+                    <th className="border border-gray-300 px-4 py-2">Name</th>
+                    <th className="border border-gray-300 px-4 py-2">Year of Study</th>
+                    <th className="border border-gray-300 px-4 py-2">Discipline Type</th>
+                    <th className="border border-gray-300 px-4 py-2">Discipline Category</th>
+                    <th className="border border-gray-300 px-4 py-2">Examination Type</th>
+                    <th className="border border-gray-300 px-4 py-2">Professor</th>
+                    <th className="border border-gray-300 px-4 py-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lectures.map((lecture, index) => (
+                    <tr key={index}>
+                      <td className="border border-gray-300 px-4 py-2">{lecture.cod}</td>
+                      <td className="border border-gray-300 px-4 py-2">{lecture.nume_disciplina}</td>
+                      <td className="border border-gray-300 px-4 py-2">{lecture.an_studiu}</td>
+                      <td className="border border-gray-300 px-4 py-2">{lecture.tip_disciplina}</td>
+                      <td className="border border-gray-300 px-4 py-2">{lecture.categorie_disciplina}</td>
+                      <td className="border border-gray-300 px-4 py-2">{lecture.tip_examinare}</td>
+                      <td className="border border-gray-300 px-4 py-2">{lecture.professorName}</td>
+                      <td className="border border-gray-300 px-4 py-2">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => router.push(`admin/lectures_update?getMethod=${lecture._links.self.method}&getLink=${lecture._links.self.href}&updateMethod=${lecture._links.update.method}&updateLink=${lecture._links.update.href}`)}
+                            className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-700 transition"
+                          >
+                            Update
+                          </button>
+                          <button
+                            onClick={() => deleteLecture(lecture.cod)}
+                            className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-700 transition"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      )}
-    </div>
       );
       case "students":
         return (
@@ -979,11 +979,11 @@ const AdminDashboard = () => {
         return (
           <div className="flex items-center justify-center h-full p-8">
             <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-md">
-              <h1 className="text-2xl font-bold mb-4 text-center">Add Colaborator</h1>
-              <form onSubmit={handleSubmitAddColaborator} className="space-y-4">
+              <h1 className="text-2xl font-bold mb-4 text-center">Add Collaborator</h1>
+              <form onSubmit={handleSubmitAddCollaborator} className="space-y-4">
                 {error && <div className="text-red-500 text-center">{error}</div>}
-                {successMessageAddColaborator && (
-                  <div className="text-green-500 text-center">{successMessageAddColaborator}</div>
+                {successMessageAddCollaborator && (
+                  <div className="text-green-500 text-center">{successMessageAddCollaborator}</div>
                 )}
                 <div>
                   <label className="block text-sm font-medium mb-1" htmlFor="email">
@@ -993,8 +993,8 @@ const AdminDashboard = () => {
                     type="email"
                     id="email"
                     name="email"
-                    value={formDataAddColaborator.email}
-                    onChange={handleInputChangeAddColaborator}
+                    value={formDataAddCollaborator.email}
+                    onChange={handleInputChangeAddCollaborator}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
                     required
                   />
@@ -1010,8 +1010,8 @@ const AdminDashboard = () => {
                     type="text"
                     id="discipline_cod"
                     name="discipline_cod"
-                    value={formDataAddColaborator.discipline_cod}
-                    onChange={handleInputChangeAddColaborator}
+                    value={formDataAddCollaborator.discipline_cod}
+                    onChange={handleInputChangeAddCollaborator}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
                     required
                   />
@@ -1035,11 +1035,11 @@ const AdminDashboard = () => {
         return (
           <div className="flex items-center justify-center h-full p-8">
             <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-md">
-              <h1 className="text-2xl font-bold mb-4 text-center">Remove Colaborator</h1>
-              <form onSubmit={handleSubmitRemoveColaborator} className="space-y-4">
+              <h1 className="text-2xl font-bold mb-4 text-center">Remove Collaborator</h1>
+              <form onSubmit={handleSubmitRemoveCollaborator} className="space-y-4">
                 {error && <div className="text-red-500 text-center">{error}</div>}
-                {successMessageRemoveColaborator && (
-                  <div className="text-green-500 text-center">{successMessageRemoveColaborator}</div>
+                {successMessageRemoveCollaborator && (
+                  <div className="text-green-500 text-center">{successMessageRemoveCollaborator}</div>
                 )}
                 <div>
                   <label className="block text-sm font-medium mb-1" htmlFor="email">
@@ -1049,8 +1049,8 @@ const AdminDashboard = () => {
                     type="email"
                     id="email"
                     name="email"
-                    value={formDataRemoveColaborator.email}
-                    onChange={handleInputChangeRemoveColaborator}
+                    value={formDataRemoveCollaborator.email}
+                    onChange={handleInputChangeRemoveCollaborator}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
                     required
                   />
@@ -1066,8 +1066,8 @@ const AdminDashboard = () => {
                     type="text"
                     id="discipline_cod"
                     name="discipline_cod"
-                    value={formDataRemoveColaborator.discipline_cod}
-                    onChange={handleInputChangeRemoveColaborator}
+                    value={formDataRemoveCollaborator.discipline_cod}
+                    onChange={handleInputChangeRemoveCollaborator}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
                     required
                   />
@@ -1150,7 +1150,7 @@ const AdminDashboard = () => {
                   : "hover:bg-purple-200 hover:text-purple-700"
               }`}
             >
-              Enroll
+              Enroll Student
             </li>
             <li
               onClick={() => changePage("unenroll_student")}
@@ -1160,7 +1160,7 @@ const AdminDashboard = () => {
                   : "hover:bg-purple-200 hover:text-purple-700"
               }`}
             >
-              Unenroll
+              Unenroll Student
             </li>
             <li
               onClick={() => changePage("add_collaborator")}
@@ -1201,7 +1201,6 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Main content */}
       <div className="flex-1 bg-white bg-opacity-90 rounded-xl p-6 shadow-xl m-4 overflow-auto">
         {renderContent()}
       </div>

@@ -136,5 +136,3 @@ class LectureEnrollment_Evaluation(BaseModel) :
 
 class AddCollaboratorRequest(BaseModel):
     profesor_id: int
-
-

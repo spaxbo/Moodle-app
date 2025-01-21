@@ -39,7 +39,14 @@ The platform is built using a **microservices architecture**, ensuring:
 This microservice handles core functionalities related to managing the LMS data:  
 - **Teachers**: Adding, updating, and retrieving teacher information.  
 - **Subjects**: Managing the list of disciplines or courses offered.  
-- **Students**: Handling student data and their enrollment in courses.  
+- **Students**: Handling student data and their enrollment in courses.
+
+Create Teacher
+- ![Screenshot (598)](https://github.com/user-attachments/assets/c223a529-e99e-4cde-bd26-88ed983017fd)
+
+Update Teacher
+- ![Screenshot (599)](https://github.com/user-attachments/assets/74944185-3f8d-4567-9d3b-88f0f5639083)
+
 
 #### **Technologies Used**  
 - **FastAPI**: For building the backend REST API efficiently.  
@@ -58,10 +65,23 @@ This microservice is focused on functionalities related to:
 #### **Integration with Microservice 1**  
 The functionalities developed in this microservice have been integrated into **Microservice 1**, where:  
 - **Teachers** can:  
-  - Add new evaluations and materials.  
-  - Update existing evaluations and materials.  
+  - Add new evaluations and materials.
+ 
+  - ![Screenshot (608)](https://github.com/user-attachments/assets/b784321b-02bf-429c-827d-424357e44ee5)
+  - ![Screenshot (611)](https://github.com/user-attachments/assets/a741c88b-4d3e-41af-ad47-fa4155f18206)
+
+  - Update existing evaluations and materials.
+    
+  - ![Screenshot (609)](https://github.com/user-attachments/assets/91e1e55c-59ae-4a17-8c16-08cc7569ce80)
+  - ![Screenshot (610)](https://github.com/user-attachments/assets/6e48a03f-57c9-48ef-9c31-0575bf167a4c)
+
+
 - **Students** can:  
-  - View available evaluations and materials assigned to their subjects or courses.  
+  - View available evaluations and materials assigned to their subjects or courses.
+ 
+  - ![Screenshot (613)](https://github.com/user-attachments/assets/ef58f9cb-561b-44f2-8fdc-67df0f45abc4)
+  - ![Screenshot (614)](https://github.com/user-attachments/assets/a1f4394b-a8cf-49bd-99fe-8d7489211299)
+
 
 #### **Technologies Used**  
 - **MongoDB**: For flexible and scalable data storage.  

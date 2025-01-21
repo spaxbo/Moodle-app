@@ -7,8 +7,16 @@ This project is a modern **Learning Management System (LMS)** platform inspired 
 - Course management  
 - Seamless interaction between **students**, **teachers**, and **disciplines**
 
-- Login Page
-- ![Screenshot (594)](https://github.com/user-attachments/assets/c030d8af-23d7-4dae-b439-18871b200014)
+  Login Page
+  -  ![Screenshot (594)](https://github.com/user-attachments/assets/c030d8af-23d7-4dae-b439-18871b200014)
+  Admin dashboard
+  -  ![Screenshot (596)](https://github.com/user-attachments/assets/1be6952a-54ae-418f-a924-4f5af13d21a7)
+  Teacher dashboard
+  -   ![Screenshot (605)](https://github.com/user-attachments/assets/3812b31f-f273-412b-a139-b6842a8560f9)
+  Student dashboard
+  -  ![Screenshot (612)](https://github.com/user-attachments/assets/f8196182-c3b5-45bb-893c-5f1ce2865ded)
+
+
 
 
 The platform is built using a **microservices architecture**, ensuring:  

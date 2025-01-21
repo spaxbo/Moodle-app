@@ -434,7 +434,7 @@ const TeacherDashboard = () => {
                           <button
                             onClick={() => router.push(`${professorId}/get_evaluation?get_link=${lecture._links.get_evaluation.href}&get_method=${lecture._links.get_evaluation.method}&update_link=${lecture._links.update_evaluation.href}&update_method=${lecture._links.update_evaluation.method}`)}
                             className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">
-                            List & Update
+                            List & Edit
                           </button>
                           <button
                             onClick={() => {
@@ -457,7 +457,7 @@ const TeacherDashboard = () => {
                           <button
                             onClick={() => router.push(`${professorId}/get_materials?get_link=${lecture._links.get_materials.href}&get_method=${lecture._links.get_materials.method}&update_link=${lecture._links.update_materials.href}&update_method=${lecture._links.update_materials.method}`)}
                             className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">
-                            List & Update
+                            List & Edit
                           </button>
                           <button
                              onClick={() => {

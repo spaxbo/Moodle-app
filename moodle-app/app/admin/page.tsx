@@ -662,7 +662,7 @@ const AdminDashboard = () => {
                               onClick={() => router.push(`admin/teachers_update?getMethod=${professor._links.self.method}&getLink=${professor._links.self.href}&updateMethod=${professor._links.update.method}&updateLink=${professor._links.update.href}`)}
                               className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-700 transition"
                             >
-                              Update
+                              Edit
                             </button>
                             <button
                               onClick={() => deleteProfessor(professor.id)}
@@ -753,7 +753,7 @@ const AdminDashboard = () => {
                             onClick={() => router.push(`admin/lectures_update?getMethod=${lecture._links.self.method}&getLink=${lecture._links.self.href}&updateMethod=${lecture._links.update.method}&updateLink=${lecture._links.update.href}`)}
                             className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-700 transition"
                           >
-                            Update
+                            Edit
                           </button>
                           <button
                             onClick={() => deleteLecture(lecture.cod)}
@@ -845,7 +845,7 @@ const AdminDashboard = () => {
                               onClick={() => router.push(`admin/students_update?getMethod=${student._links.self.method}&getLink=${student._links.self.href}&updateMethod=${student._links.update.method}&updateLink=${student._links.update.href}`)}
                               className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-700 transition"
                             >
-                              Update
+                              Edit
                             </button>
                             <button
                               onClick={() => deleteStudent(student.id)}

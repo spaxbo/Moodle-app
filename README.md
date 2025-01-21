@@ -5,7 +5,11 @@
 This project is a modern **Learning Management System (LMS)** platform inspired by Moodle, designed to facilitate:  
 - E-learning  
 - Course management  
-- Seamless interaction between **students**, **teachers**, and **disciplines**  
+- Seamless interaction between **students**, **teachers**, and **disciplines**
+
+- Login Page
+- ![Screenshot (594)](https://github.com/user-attachments/assets/c030d8af-23d7-4dae-b439-18871b200014)
+
 
 The platform is built using a **microservices architecture**, ensuring:  
 - **Scalability**  
@@ -53,17 +57,19 @@ The functionalities developed in this microservice have been integrated into **M
 
 ---
 
-### **3. Security with gRPC and JWT**  
+### **3. Security with gRPC, FastAPI, and JWT**  
 #### **Description**  
 This microservice is responsible for securing the LMS platform using **gRPC** for efficient communication between services and **JWT (JSON Web Tokens)** for authentication and authorization.  
 
 #### **Functionalities**  
 - **gRPC-based communication**: Enables fast and secure interactions between microservices.  
 - **JWT implementation**: Secures endpoints by requiring valid tokens for access, ensuring only authorized users can interact with the system.  
+- **FastAPI for gRPC integration**: Combines the simplicity of FastAPI for defining REST APIs with gRPC for inter-service communication.
 
 #### **Technologies Used**  
+- **FastAPI**: For building RESTful APIs alongside gRPC communication.  
 - **gRPC**: For efficient service-to-service communication.  
-- **Docker**: For containerized deployment of the gRPC service.  
+- **Docker**: For containerized deployment of the gRPC and FastAPI service.  
 - **Postman**: For testing gRPC requests and verifying token-based security.  
 
 ---
